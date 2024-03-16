@@ -8,6 +8,7 @@ env:
   TAG_SUFFIX: rel
   GHCR_IO_REPO: faasr
   AWS_REGION: us-east-1
+  FAASR_TAG: 1.1.2
 
 permissions: write-all
 
@@ -56,5 +57,12 @@ jobs:
         run: |
           docker tag ${{ steps.login-ecr.outputs.registry }}/aws-lambda-tidyverse:${{ env.FAASR_VERSION }}-${{ env.TAG_SUFFIX }} ${{ steps.login-ecr.outputs.registry }}/aws-lambda-tidyverse:latest
           docker push ${{ steps.login-ecr.outputs.registry }}/aws-lambda-tidyverse:latest
+      - name: Pull custom github-actions-faasr Docker hub image
+        run: |
+          docker pull ${{ secrets.DOCKERHUB_USERNAME }}/github-actions-faasr:${{ env.FAASR_TAG }}-${{ env.TAG_SUFFIX }}
+      - name: Tag and push github-actions-tidyverse Github Container registry image
+        run: |
+          docker tag ${{ secrets.DOCKERHUB_USERNAME }}/github-actions-faasr:${{ env.FAASR_TAG }}-${{ env.TAG_SUFFIX }} ${{ secrets.DOCKERHUB_USERNAME }}/github-actions-faasr:latest
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/github-actions-faasr:latest
 
           

@@ -1,0 +1,46 @@
+name: Build and push Base image
+
+on: workflow_dispatch
+
+env:
+  TIDYVERSE_VERSION: 4.3.1
+  FAASR_VERSION: 1.1.2
+  # The base version (Rocker+dependences, FaaS-agnostic) to build from
+  FAASR_BASE_VERSION: 1.1.2
+  # The GitHub FaaSr tag to install from
+  FAASR_TAG: 1.1.2
+  # The GitHub FaaSr repo to install from
+  FAASR_INSTALL_REPO: FaaSr/FaaSr-package
+  # Suffix applied to versions
+  TAG_SUFFIX: rel
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Login to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Build base-custom-flare Docker image
+        run: |
+          cd custom-flare
+          docker build -t base-custom-flare:${{ env.FAASR_VERSION }}-${{ env.TAG_SUFFIX }} -f base-custom-flare.Dockerfile --build-arg TIDYVERSE_TAG=${{ env.TIDYVERSE_VERSION }} .
+      - name: Push base-custom-flare Docker image
+        run: |
+          docker tag base-custom-flare:${{ env.FAASR_VERSION }}-${{ env.TAG_SUFFIX }} ${{ secrets.DOCKERHUB_USERNAME }}/base-custom-flare:${{ env.FAASR_VERSION }}-${{ env.TAG_SUFFIX }}
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/base-custom-flare:${{ env.FAASR_VERSION }}-${{ env.TAG_SUFFIX }}
+
+      - name: Build github-actions-faasr Container registry image
+        run: |
+          cd custom-flare
+          docker build -t github-actions-faasr:${{ env.FAASR_TAG }}-${{ env.TAG_SUFFIX }} -f github-actions.Dockerfile --build-arg FAASR_VERSION=${{ env.FAASR_BASE_VERSION }}-${{ env.TAG_SUFFIX }} --build-arg FAASR_TAG=${{ env.FAASR_TAG }} --build-arg FAASR_INSTALL_REPO=${{ env.FAASR_INSTALL_REPO }} .
+      - name: Push github-actions-faasr Container registry image
+        run: |
+          docker tag github-actions-faasr:${{ env.FAASR_TAG }}-${{ env.TAG_SUFFIX }} ${{ secrets.DOCKERHUB_USERNAME }}/github-actions-faasr:${{ env.FAASR_TAG }}-${{ env.TAG_SUFFIX }}
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/github-actions-faasr:${{ env.FAASR_TAG }}-${{ env.TAG_SUFFIX }}
